@@ -1,14 +1,36 @@
-纯自用的某神秘P网站辅助插件。可以一键下载帖子中的图片，以及接管附件与视频下载。下载的图片和文件会自动按文件夹整理并与重命名。
-支持生成图片缩略图快速预览
-另外包含作者主页优化，未打开过的帖子会显示绿框，未存档的帖子会打红叉，妈妈再也不用担心我分不清楚帖子了。
-使用aria2接管下载，内置自动重试功能。实际上是第二版，上一个版本使用浏览器自带下载经常抽风，不堪忍受，遂重构。
-AI含量100%，没有一行代码是我自己写的。出了问题请拷打deepseek。
-搭载实验性的反广告功能。
-目前只支持中文，理论上其他语言的系统也能正常使用，未测试。项目中有一点cmd，剩下的是python和js，理论上可以简单移植到其他平台。
-欢迎为本项目提供贡献，特别欢迎指出bug与提供其他语言本地化支持！
-本项目不分发aria2，请去他们的Releases下载。
+# 纯自用的某神秘P网站辅助插件（chrome浏览器扩展）
+可以一键下载帖子中的图片，管理附件与视频下载
 
-真有人用这个东西吗？如果你感兴趣的话，以下是AI总结的使用指南：
+**下载的图片和文件会自动按文件夹整理并与重命名**
+
+![整理后的文件夹](https://github.com/hjhjfhjhujhh/pawchive-downloader/blob/main/images/8d939d10-bd9e-4cb7-820c-8a4ec96df35f.png)
+
+**生成图片缩略图快速预览**
+
+![缩略图](https://github.com/hjhjfhjhujhh/pawchive-downloader/blob/main/images/da6d8d30-232b-4db0-a7f7-1b1f83c33977.png)
+
+**另外包含作者主页优化，未打开过的帖子会显示绿框，未存档的帖子会打红叉，妈妈再也不用担心我分不清楚帖子了**
+
+![作者主页优化](https://github.com/hjhjfhjhujhh/pawchive-downloader/blob/main/images/238a9330-84ee-4048-8fa9-47eabf9c5d93.png)
+
+**使用aria2接管下载，内置自动重试功能。实际上是第二版，上一个版本使用浏览器自带下载经常抽风，不堪忍受，遂重构**
+
+![下载器设置](https://github.com/hjhjfhjhujhh/pawchive-downloader/blob/main/images/6efe3470-524a-4c91-a989-44a483ee9f27.png)
+![下载管理](https://github.com/hjhjfhjhujhh/pawchive-downloader/blob/main/images/30865374-9d97-4a15-b9fa-f3cda159868e.png)
+
+AI含量100%，没有一行代码是我自己写的。出了问题请拷打deepseek
+
+搭载实验性的反广告功能（大大优化网页本身加载速度！）
+
+目前只支持中文，理论上其他语言的系统也能正常使用，未测试。项目中有一点cmd，剩下的是python和js，理论上可以简单移植到其他平台。
+
+欢迎为本项目提供贡献，特别欢迎指出bug与提供其他语言本地化支持！
+
+本项目不分发aria2，请去他们的Releases下载
+
+本软件不维护任何下载与浏览记录，访问记录功能依靠浏览器原生实现，绝不在你的浏览器里面拉屎。
+
+真有人用这个东西吗？如果你感兴趣的话，以下是**AI总结的使用指南：**
 ## 主要功能
 
 - **一键下载整帖**：左下角悬浮面板点一下，帖子里的图片全部入队；
@@ -30,7 +52,7 @@ AI含量100%，没有一行代码是我自己写的。出了问题请拷打deeps
 
 ## 安装（Windows）
 
-1. **装 Python**：安装 Python 3.8+，安装时勾选 **Add python.exe to PATH**。
+1. **装 Python**：安装 Python 3.8+，安装时勾选 **Add python.exe to PATH**。为什么不把python文件打包？哈哈我不干
 2. **放好下载引擎**：从 aria2 发布页下载 Windows 版，解压后把其中的
    **`aria2c.exe` 复制到 `helper` 文件夹**里。
 3. **注册辅助程序**：双击 `helper\install.cmd`，看到「宿主清单」「注册表」
@@ -57,3 +79,9 @@ AI含量100%，没有一行代码是我自己写的。出了问题请拷打deeps
 - **下载目录**：默认系统「下载」文件夹，可在扩展弹窗里改成任意路径。
 - **想重新下载已下过的文件**：默认开启「允许重新下载」，重复点下载即可；
   目标目录里同名文件会自动存成 `xxx (1).jpg`。
+  
+## License
+
+[![CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
+
+本项目采用 [知识共享 署名-非商业性使用 4.0 国际许可协议 (CC BY-NC 4.0)](https://creativecommons.org/licenses/by-nc/4.0/) 进行许可。
