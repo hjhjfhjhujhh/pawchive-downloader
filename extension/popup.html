@@ -99,8 +99,16 @@
     .badge--ok { background: rgba(76, 175, 80, 0.2); color: #9be39b; }
     .badge--warn { background: rgba(255, 183, 77, 0.18); color: #ffb74d; }
     .mono { font-size: 11.5px; color: #8b91a0; word-break: break-all; line-height: 1.5; }
+    /* 当前帖子区：只在「目标是 pawchive/kemono」时才显示，避免设置页里常驻一行
+       "没检测到站点" 的提示。初始文案故意留空，由 popup.js 填。 */
+    #postSection[hidden] { display: none; }
     #postInfo { font-size: 12px; color: #b9bec9; word-break: break-all; margin-bottom: 8px; white-space: pre-line; }
     #postInfo.warn { color: #ffb74d; }
+    #postInfo.hint { color: #8b91a0; }
+    #downloadBtn[hidden] { display: none; }
+    /* 未存档帖子（只有缩略图）：按钮切橙色，与页面悬浮面板一致 */
+    #downloadBtn.thumb { background: #f57c00; }
+    #downloadBtn.thumb:hover { background: #ef6c00; }
     ul.queue { list-style: none; margin: 0; padding: 0; }
     ul.queue li {
       font-size: 11.5px;
@@ -151,7 +159,29 @@
     .files__dot--failed { background: #d32f2f; }
     .files__name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .files__meta { flex: 0 0 auto; color: #8b91a0; font-size: 10.5px; }
+    /* 每个文件右侧的单独取消按钮：小按钮，不抢名字的空间 */
+    .files__cancel {
+      flex: 0 0 auto;
+      width: 18px;
+      height: 18px;
+      padding: 0;
+      margin: 0;
+      border: 1px solid #4a5060;
+      border-radius: 4px;
+      background: transparent;
+      color: #b9bec9;
+      font-size: 10px;
+      font-weight: 700;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .files__cancel:hover { background: #d32f2f; border-color: #d32f2f; color: #fff; }
+    .files__cancel:disabled { opacity: 0.5; cursor: wait; }
     .files__empty { color: #8b91a0; font-size: 11.5px; padding: 4px 0; }
+    #queueMsg { min-height: 14px; margin-top: 6px; font-size: 11.5px; color: #8b91a0; word-break: break-all; }
+    #queueMsg[data-kind="ok"] { color: #9be39b; }
+    #queueMsg[data-kind="warn"] { color: #ffb74d; }
+    #queueMsg[data-kind="info"] { color: #90caf9; }
     .files__actions { display: flex; gap: 6px; margin-top: 8px; }
     .files__actions button { margin-top: 0; }
     button.danger { background: #d32f2f; }
@@ -198,6 +228,7 @@
     <label for="blockWords">标题屏蔽字（每行一个）</label>
     <textarea id="blockWords" placeholder="(Pixiv Fanbox)&#10;patreon"></textarea>
   </div>
+  <p class="hint">默认已填入 <code>(Pixiv Fanbox)</code> 与 <code>patreon</code>，无需手动加；保存后作用于之后新入队的帖子目录名。清空并保存 = 不屏蔽任何词。</p>
 
   <label class="switch field" for="blockCover">
     <span>自动跳过封面图（fanbox）</span>
@@ -208,15 +239,27 @@
   </label>
   <p class="hint">开启后，「下载帖子全部图片」会自动跳过 fanbox 帖子的封面（文件名 <code>cover.*</code>；找不到时跳过第一张）。附件与视频不受影响。</p>
 
+  <label class="switch field" for="allowRedownload" style="margin-top:10px">
+    <span>允许重新下载已完成的文件</span>
+    <span style="display:flex;align-items:center;gap:8px">
+      <input type="checkbox" id="allowRedownload" checked>
+      <span class="switch__track"></span>
+    </span>
+  </label>
+  <p class="hint">开启（默认）：重复点「下载」会把<strong>已完成</strong>的文件重新排队（目标目录里同名文件会自动变成 <code>xxx (1).jpg</code>）。关闭：已下载完成的文件直接跳过，避免重复下载。下载失败的文件始终可以重试，不受这个开关影响。</p>
+
   <button id="save">保存设置</button>
   <div id="saveStatus"></div>
   <p class="hint">并行数默认 8，aria2 每个文件最多 8 连接、自身重试 5 次，扩展再加 2 次重试。</p>
 
-  <hr>
-
-  <div id="postInfo">未检测到 pawchive/kemono 帖子页面</div>
-  <button id="downloadBtn" class="secondary">下载当前帖子全部图片</button>
-  <div id="dlStatus"></div>
+  <!-- 只有当前是 pawchive/kemono 页面时才显示。分隔线放在区块里面：
+       隐藏时只留下面那根 <hr>，不会出现两条挨着的分隔线。 -->
+  <div id="postSection" hidden>
+    <hr>
+    <div id="postInfo"></div>
+    <button id="downloadBtn" class="secondary">下载当前帖子全部图片</button>
+    <div id="dlStatus"></div>
+  </div>
 
   <hr>
 
@@ -226,6 +269,7 @@
   </div>
   <div class="mono" id="queueSummary"></div>
   <div class="files" id="fileList"></div>
+  <div id="queueMsg"></div>
   <div class="files__actions">
     <button id="cancelAll" class="danger" disabled>中止全部下载</button>
     <button id="clearFinished" class="secondary">清除已完成</button>

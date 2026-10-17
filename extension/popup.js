@@ -3,13 +3,20 @@
 
 const $ = (selector) => document.querySelector(selector);
 
+// 「标题屏蔽字」默认值：与弹窗里的示例内容一致（装好即生效、不必先手填）。
+// 空数组是有效值 —— 用户清空并保存后就该什么都不屏蔽，所以这里只在
+// storage 里没有这个键时才用默认值（chrome.storage.sync.get 的语义）。
+const DEFAULT_BLOCK_WORDS = ['(Pixiv Fanbox)', 'patreon'];
+
 const DEFAULT_SETTINGS = {
   skipFirst: 0,
   skipLast: 0,
   maxParallel: 8,
-  blockWords: [],
+  blockWords: DEFAULT_BLOCK_WORDS.slice(),
   downloadDir: '',
-  blockCover: true
+  blockCover: true,
+  // 已完成的同一文件再点下载时是否允许重新下（默认开）
+  allowRedownload: true
 };
 
 let lastStatus = null;
@@ -28,6 +35,8 @@ function loadSettings() {
     $('#downloadDir').value = settings.downloadDir || '';
     $('#blockWords').value = (settings.blockWords || []).join('\n');
     $('#blockCover').checked = settings.blockCover !== false;
+    // 老版本没有这个键 → 默认开
+    $('#allowRedownload').checked = settings.allowRedownload !== false;
   });
 }
 
@@ -50,6 +59,7 @@ async function saveSettings() {
     )
   );
   const blockCover = $('#blockCover').checked;
+  const allowRedownload = $('#allowRedownload').checked;
 
   await chrome.storage.sync.set({
     skipFirst,
@@ -57,7 +67,8 @@ async function saveSettings() {
     maxParallel,
     downloadDir,
     blockWords,
-    blockCover
+    blockCover,
+    allowRedownload
   });
 
   $('#skipFirst').value = skipFirst;
@@ -66,6 +77,7 @@ async function saveSettings() {
   $('#downloadDir').value = downloadDir;
   $('#blockWords').value = blockWords.join('\n');
   $('#blockCover').checked = blockCover;
+  $('#allowRedownload').checked = allowRedownload;
 
   // 并行数改动立即同步给 aria2，不必重启引擎
   chrome.runtime.sendMessage({ type: 'PD_APPLY_SETTINGS' });
@@ -91,36 +103,98 @@ function isTargetSite(url) {
   return !!url && /^https?:\/\/([a-z0-9-]+\.)*(pawchive|kemono)\.(pw|su|party)\//.test(url);
 }
 
-async function refreshPostInfo() {
-  const tab = await getActiveTab();
+// 站点内的「帖子页」判断（与 content.js 的 POST_PATH_RE 保持一致）
+const POST_PATH_RE = /\/([a-z0-9_-]+)\/user\/(\d+)\/post\/(\d+)/i;
+
+function isPostUrl(url) {
+  try {
+    return POST_PATH_RE.test(new URL(url).pathname);
+  } catch (err) {
+    return false;
+  }
+}
+
+// 弹窗打开时决定「当前帖子」这块要不要显示。
+//
+// 以前这里不管在哪个页面都固定写一句「未检测到 pawchive/kemono 帖子页面」——
+// 设置页大多数时候都开在别的网站上，那行字纯属噪声。现在：
+//   - 非目标站点：整块隐藏；
+//   - 站内非帖子页：只给一句中性提示（没有东西可下，按钮也收起来）；
+//   - 帖子页：显示下载目录 + 图片数 + 队列情况。
+async function refreshPostInfo(retried) {
+  const section = $('#postSection');
   const infoEl = $('#postInfo');
   const downloadBtn = $('#downloadBtn');
+  const dlStatus = $('#dlStatus');
+  if (!infoEl || !downloadBtn) return;
 
-  if (!tab || !isTargetSite(tab.url || '')) {
-    infoEl.textContent = '未检测到 pawchive/kemono 页面';
-    infoEl.classList.add('warn');
+  const showBlock = (visible) => {
+    if (section) section.hidden = !visible;
+  };
+  const setInfo = (text, kind) => {
+    infoEl.textContent = text || '';
+    infoEl.classList.toggle('warn', kind === 'warn');
+    infoEl.classList.toggle('hint', kind === 'hint');
+  };
+
+  const tab = await getActiveTab();
+  const url = (tab && tab.url) || '';
+
+  if (!isTargetSite(url)) {
+    // 设置页在别的网站上打开：不显示任何"未检测到"的提示
+    showBlock(false);
     downloadBtn.disabled = true;
+    currentPostKey = '';
     return;
   }
 
+  if (!isPostUrl(url)) {
+    showBlock(true);
+    setInfo('当前不是帖子页面：打开某个帖子后，可以在这里一键下载整帖。', 'hint');
+    downloadBtn.hidden = true;
+    if (dlStatus) dlStatus.textContent = '';
+    currentPostKey = '';
+    return;
+  }
+
+  // 帖子页：问内容脚本要当前帖子的信息
+  showBlock(true);
+  downloadBtn.hidden = false;
   chrome.tabs.sendMessage(tab.id, { type: 'PD_GET_STATUS' }, (response) => {
     if (chrome.runtime.lastError || !response || !response.post) {
-      infoEl.textContent = '已打开站点，但当前不是帖子页面';
-      infoEl.classList.add('warn');
+      // 内容脚本没就绪（典型场景：扩展刚重载/刚安装，页面上的脚本还没刷新）。
+      // 刚打开弹窗时内容脚本可能还在 300ms 防抖里，给一次重试机会。
+      if (!retried) {
+        setTimeout(() => refreshPostInfo(true), 600);
+        return;
+      }
+      setInfo('页面还没就绪：刷新一下这个帖子页，再点扩展图标。', 'warn');
       downloadBtn.disabled = true;
       return;
     }
-    infoEl.classList.remove('warn');
+
     currentPostKey = `${response.post.platform}|${response.post.userId}|${response.post.postId}`;
+    // 未存档帖子只有缩略图：按钮文案/配色跟着换，别让弹窗和面板说的不一样
+    const unarchived = !!response.post.unarchived;
+    downloadBtn.textContent = unarchived ? '下载当前帖子全部缩略图' : '下载当前帖子全部图片';
+    downloadBtn.classList.toggle('thumb', unarchived);
+    downloadBtn.title = unarchived ? '该帖子尚未存档，只能下载缩略图' : '';
     // count 现在特指「仍在队列里（排队+下载中）」的数量，不含已完成的历史记录，
     // 否则会出现「已经在队列 2 个」但其实只剩 1 个在下的多一个现象。
     const queuedNow = response.post.count || 0;
     const finished = (response.post.done || 0) + (response.post.failed || 0);
-    infoEl.textContent =
-      `${response.engine.dir || ''}\n` +
-      `图片 ${response.post.imageCount} 张` +
-      (queuedNow ? `，队列中 ${queuedNow} 个` : '，队列为空') +
-      (finished ? `（本次已完成 ${finished}）` : '');
+    const lines = [];
+    // 内容脚本的响应里带 engine（下载目录）。老版本内容脚本没有这个字段，
+    // 这里必须容错 —— 之前直接读 response.engine.dir，帖子页上会抛异常，
+    // 结果整段文案永远停在 HTML 里那句初始文本上。
+    const dir = (response.engine && response.engine.dir) || '';
+    if (dir) lines.push(dir);
+    lines.push(
+      `${unarchived ? '缩略图' : '图片'} ${response.post.imageCount} 张` +
+        (queuedNow ? `，队列中 ${queuedNow} 个` : '，队列为空') +
+        (finished ? `（本次已完成 ${finished}）` : '')
+    );
+    setInfo(lines.join('\n'), '');
     downloadBtn.disabled = false;
   });
 }
@@ -189,6 +263,53 @@ const STATUS_LABEL = {
   failed: '失败'
 };
 
+// 正在等待后台响应的单文件取消请求（列表每秒重绘，靠它保持按钮禁用状态）
+const cancellingIds = new Set();
+let queueMsgTimer = null;
+
+function showQueueMessage(text, kind) {
+  const el = $('#queueMsg');
+  if (!el) return;
+  el.textContent = text || '';
+  el.dataset.kind = kind || '';
+  if (queueMsgTimer) clearTimeout(queueMsgTimer);
+  queueMsgTimer = null;
+  if (!text) return;
+  queueMsgTimer = setTimeout(() => {
+    queueMsgTimer = null;
+    el.textContent = '';
+  }, 4000);
+}
+
+// 只改这一个按钮的状态（不重绘整个列表：重绘会把按钮节点换掉，还会丢焦点）
+function setCancelButtonBusy(btn, busy) {
+  if (!btn) return;
+  btn.disabled = busy;
+  btn.textContent = busy ? '…' : '✕';
+  btn.title = busy ? '正在取消…' : '取消这个文件的下载';
+}
+
+// 取消单个文件：排队中的直接移出队列；下载中的请后台 forceRemove 断掉连接。
+function cancelOneFile(record, btn) {
+  if (!record || cancellingIds.has(record.id)) return;
+  cancellingIds.add(record.id);
+  setCancelButtonBusy(btn, true);
+  showQueueMessage(`正在取消：${record.file}`, 'info');
+
+  chrome.runtime.sendMessage({ type: 'PD_CANCEL_ONE', id: record.id }, (response) => {
+    cancellingIds.delete(record.id);
+    setCancelButtonBusy(btn, false);
+    if (chrome.runtime.lastError || !response) {
+      showQueueMessage('取消失败：无法连接后台', 'warn');
+    } else if (!response.ok) {
+      showQueueMessage(`取消失败：${response.error || '未知原因'}`, 'warn');
+    } else {
+      showQueueMessage(`已取消：${response.file || record.file}`, 'ok');
+    }
+    refreshQueueStatus();
+  });
+}
+
 function renderFileList(records) {
   const list = $('#fileList');
   list.textContent = '';
@@ -234,6 +355,25 @@ function renderFileList(records) {
         : STATUS_LABEL[record.status] || record.status;
 
     row.append(dot, name, meta);
+
+    // 只有还没结束的文件才给取消按钮（已完成/失败的用「清除已完成」）
+    if (record.status === 'pending' || record.status === 'active') {
+      const busy = cancellingIds.has(record.id);
+      const cancelBtn = document.createElement('button');
+      cancelBtn.type = 'button';
+      cancelBtn.className = 'files__cancel';
+      cancelBtn.textContent = busy ? '…' : '✕';
+      cancelBtn.title = busy ? '正在取消…' : '取消这个文件的下载';
+      cancelBtn.setAttribute('aria-label', `取消下载 ${record.file}`);
+      cancelBtn.disabled = busy;
+      cancelBtn.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        cancelOneFile(record, cancelBtn);
+      });
+      row.appendChild(cancelBtn);
+    }
+
     list.appendChild(row);
   }
 }

@@ -20,13 +20,21 @@ const ALARM_RECOVERY_MINUTES = 1;
 const TICK_MS = 1200;
 const NATIVE_HOST = 'com.pawchive.downloader';
 
+// 「标题屏蔽字」的默认值：与弹窗里的示例内容保持一致，装好就生效，不需要用户
+// 先手动填一遍。注意语义：用户清空后点保存，存下来的是空数组，空数组优先于
+// 这里的默认值 —— 那代表「我确实不想屏蔽任何词」，不能被默认值覆盖回去。
+const DEFAULT_BLOCK_WORDS = ['(Pixiv Fanbox)', 'patreon'];
+
 const DEFAULT_SETTINGS = {
   skipFirst: 0,
   skipLast: 0,
   maxParallel: 8,
-  blockWords: [],
+  blockWords: DEFAULT_BLOCK_WORDS.slice(),
   downloadDir: '',
-  blockCover: true
+  blockCover: true,
+  // 已完成的同一文件再点下载时，是否允许重新下（默认开）。
+  // 关掉就退回旧行为：把 done 当重复直接跳过。
+  allowRedownload: true
 };
 
 const MAX_ENGINE_RETRIES = 2; // aria2 自身 max-tries=5 之外的额外重试次数
@@ -509,6 +517,36 @@ function createRecord(post, item, settings) {
   };
 }
 
+// 把一条已经结束（完成/失败）的记录重新排队。
+//
+// 为什么复用而不是新建：同一个帖子重复点「下载」时，如果每次都新建记录，
+// 队列里就会堆出重复行、帖子统计也会翻倍。复用后表现是那一行从「完成」变回
+// 「排队」，与用户点按钮的直觉一致。路径/标题按**当前**设置重算。
+function reviveRecord(record, post, item, settings) {
+  const built = buildPath(post, item, settings);
+  seqCounter += 1;
+  record.post = {
+    platform: post.platform,
+    userId: post.userId,
+    postId: post.postId,
+    title: post.title || '',
+    author: post.author || ''
+  };
+  record.url = item.url;
+  record.name = item.name || '';
+  record.kind = item.kind;
+  record.index = item.index || 0;
+  record.path = built.path;
+  record.file = built.file;
+  record.seq = seqCounter;
+  record.status = 'pending';
+  record.gid = '';
+  record.engineRetries = 0;
+  record.error = '';
+  delete record.attemptAt;
+  return record;
+}
+
 function recordsFor(key) {
   return Object.values(records).filter((r) => r.key === key);
 }
@@ -662,6 +700,17 @@ async function moveToTarget(record) {
 async function dispatch(record) {
   try {
     const gid = await rpc('aria2.addUri', [[record.url], buildDownloadParams(record)]);
+    // 这条记录可能在 addUri 往返期间被用户单独取消（已从 records 里删掉）。
+    // 那就必须补一次 forceRemove —— 否则 aria2 会继续把它下完并留在 staging 里，
+    // 而扩展这边已经没有任何记录指向它，等于一条无声的孤儿任务。
+    if (!records[record.id]) {
+      try {
+        await rpc('aria2.forceRemove', [gid]);
+      } catch (err) {
+        // 已经不在了也无所谓
+      }
+      return false;
+    }
     record.gid = gid;
     record.attemptAt = Date.now();
     tracker[gid] = {
@@ -964,24 +1013,60 @@ async function handleEnqueue(message) {
 
   const settings = await getSettings();
   const key = postKeyOf(post);
+  // 「允许重新下载」开关（默认开）：关掉时已完成的同一文件会被跳过，
+  // 表现与旧版一致（防止重复下载、避免目标目录里堆出 xxx (1).ext）。
+  const allowRedownload = settings.allowRedownload !== false;
 
-  // 同一帖子重复点击：跳过已排队/已下载/正在下载的同一 URL
-  const existing = new Set(
+  // 同一帖子的同一个 URL：
+  //   - 排队中 / 下载中 → 永远跳过（避免重复入队）
+  //   - 已完成         → 开关开：**复活**那条记录重新排队；开关关：跳过并计数
+  //   - 失败           → 总是复活重下（失败不算"已下载"，不受开关影响）
+  // 以前不看开关，把 done 一律当重复跳过，于是"一键下载完成后再点没反应"。
+  const inFlight = new Set(
     recordsFor(key)
-      .filter((r) => r.status === 'pending' || r.status === 'active' || r.status === 'done')
+      .filter((r) => r.status === 'pending' || r.status === 'active')
       .map((r) => r.url)
   );
+  const doneByUrl = new Map();
+  const failedByUrl = new Map();
+  for (const record of recordsFor(key)) {
+    if (record.status === 'done') doneByUrl.set(record.url, record);
+    else if (record.status === 'failed') failedByUrl.set(record.url, record);
+  }
 
   let added = 0;
+  let skippedDone = 0;
   for (const item of items) {
-    if (existing.has(item.url)) continue;
-    existing.add(item.url);
+    if (inFlight.has(item.url)) continue;
+    inFlight.add(item.url);
+
+    const done = doneByUrl.get(item.url);
+    if (done && !allowRedownload) {
+      skippedDone += 1; // 已在本地下过，且用户关掉了「允许重新下载」
+      continue;
+    }
+    const finished = done || failedByUrl.get(item.url);
+    if (finished) {
+      // 同一批里重复出现的 URL 只复活一次
+      doneByUrl.delete(item.url);
+      failedByUrl.delete(item.url);
+      reviveRecord(finished, post, item, settings);
+      added += 1;
+      continue;
+    }
+
     const record = createRecord(post, item, settings);
     records[record.id] = record;
     added += 1;
   }
   if (added === 0) {
-    return { ok: true, added: 0, duplicate: true, summary: summarizePost(key) };
+    return {
+      ok: true,
+      added: 0,
+      duplicate: true,
+      skippedDone,
+      summary: summarizePost(key)
+    };
   }
 
   await saveState();
@@ -1030,69 +1115,63 @@ async function clearAlarmIfIdle() {
   }
 }
 
+// 把一个文件从队列里摘掉：先删记录（pump 立刻能拿到空出来的名额），
+// 再断掉 aria2 里的任务（进行中的要 forceRemove，否则只是移出等待队列）。
+async function dropRecord(record) {
+  delete records[record.id];
+  if (!record.gid) return;
+  try {
+    await rpc('aria2.forceRemove', [record.gid]);
+  } catch (err) {
+    // gid 已经结束/被移除时这里会报错，忽略
+  }
+  delete tracker[record.gid];
+}
+
 async function handleCancel(message) {
   const key = message.key;
   const victims = Object.values(records).filter(
     (r) => r.key === key && (r.status === 'pending' || r.status === 'active')
   );
 
-  for (const record of victims) {
-    if (record.status === 'pending') {
-      delete records[record.id];
-      continue;
-    }
-    record.status = 'cancelled';
-    if (record.gid) {
-      try {
-        await rpc('aria2.forceRemove', [record.gid]);
-      } catch (err) {
-        // 忽略
-      }
-      delete tracker[record.gid];
-    }
-  }
+  for (const record of victims) await dropRecord(record);
 
-  for (const record of Object.values(records)) {
-    if (record.status === 'cancelled') delete records[record.id];
-  }
-
+  if (victims.length > 0) setLog(`已取消 ${victims.length} 个文件`);
   await saveState();
   await clearAlarmIfIdle();
   await broadcast();
   return { ok: true, cancelled: victims.length };
 }
 
+// 单文件取消：弹窗队列里每一行的「✕」走这里。
+// 排队中的直接移除；下载中的先 forceRemove 断连接再移除（与「中止全部」同语义）。
+async function handleCancelOne(message) {
+  const id = typeof message.id === 'string' ? message.id : '';
+  const record = id ? records[id] : null;
+  if (!record) return { ok: false, error: '该文件已经不在队列里（可能已完成或已被取消）' };
+  if (record.status === 'done' || record.status === 'failed') {
+    return { ok: false, error: '该文件已经结束，不需要取消' };
+  }
+
+  const wasActive = record.status === 'active';
+  const file = record.file;
+  await dropRecord(record);
+  setLog(wasActive ? `已取消下载：${file}` : `已取消排队：${file}`);
+
+  await saveState();
+  await clearAlarmIfIdle();
+  await broadcast();
+  return { ok: true, file, wasActive };
+}
+
 async function handleCancelAll() {
   const victims = Object.values(records).filter(
     (r) => r.status === 'pending' || r.status === 'active'
   );
-  const activeGids = victims.filter((r) => r.status === 'active' && r.gid).map((r) => r.gid);
 
-  for (const record of victims) {
-    if (record.status === 'pending') delete records[record.id];
-    else record.status = 'cancelled';
-  }
-  if (activeGids.length > 0) {
-    try {
-      // forceRemove 连「下载中」的连接一起断掉，否则只是移出等待队列
-      await rpc('aria2.forceRemove', [activeGids[0]]);
-    } catch (err) {
-      // 单个失败不影响其余
-    }
-    for (const gid of activeGids.slice(1)) {
-      try {
-        await rpc('aria2.forceRemove', [gid]);
-      } catch (err) {
-        // 忽略
-      }
-    }
-    for (const gid of activeGids) delete tracker[gid];
-  }
+  for (const record of victims) await dropRecord(record);
 
-  for (const record of Object.values(records)) {
-    if (record.status === 'cancelled') delete records[record.id];
-  }
-
+  if (victims.length > 0) setLog(`已中止全部下载（${victims.length} 个文件）`);
   await saveState();
   await clearAlarmIfIdle();
   await broadcast();
@@ -1198,6 +1277,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return handleDownloadOne(message);
       case 'PD_CANCEL':
         return handleCancel(message);
+      case 'PD_CANCEL_ONE':
+        return handleCancelOne(message);
       case 'PD_CANCEL_ALL':
         return handleCancelAll();
       case 'PD_GET_STATUS':

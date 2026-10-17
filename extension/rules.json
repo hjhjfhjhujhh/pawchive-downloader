@@ -34,5 +34,15 @@
       "requestDomains": ["botsdiag.com"],
       "resourceTypes": ["script", "sub_frame", "xmlhttprequest", "image", "ping", "other"]
     }
+  },
+  {
+    "id": 10,
+    "priority": 3,
+    "action": { "type": "block" },
+    "condition": {
+      "initiatorDomains": ["pawchive.pw", "pawchive.su", "kemono.party", "kemono.su"],
+      "excludedRequestDomains": ["pawchive.pw", "pawchive.su", "kemono.party", "kemono.su"],
+      "resourceTypes": ["script"]
+    }
   }
 ]

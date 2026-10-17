@@ -20,11 +20,28 @@
   box-sizing: border-box;
 }
 
+/* 标题栏 = 面板的拖动手柄：按住它可以把面板拖到任意位置 */
 .pd-panel__head {
   display: flex;
   align-items: center;
   gap: 6px;
   margin-bottom: 8px;
+  /* 抓手光标；拖动时由 .pd-panel--dragging 换成 grabbing */
+  cursor: grab;
+  /* 拖动时不要选中标题文字，也不要把触摸手势交给页面滚动 */
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+
+#pd-panel.pd-panel--dragging {
+  /* 拖动中：不选中任何文字，并且保证位移走合成层 */
+  user-select: none;
+  will-change: transform;
+}
+
+#pd-panel.pd-panel--dragging .pd-panel__head {
+  cursor: grabbing;
 }
 
 .pd-panel__logo {
@@ -50,6 +67,8 @@
 .pd-panel__row {
   display: flex;
   gap: 8px;
+  /* 取消按钮出现时一共三个按钮，260px 放不下：允许换行，别让文字竖着折 */
+  flex-wrap: wrap;
 }
 
 .pd-btn {
@@ -61,6 +80,7 @@
   font-weight: 600;
   color: #e8e8e8;
   background: #3a3f4b;
+  white-space: nowrap;
   transition: background 0.15s ease, opacity 0.15s ease;
 }
 
@@ -81,6 +101,17 @@
 
 .pd-btn--primary:hover {
   background: #43a047;
+}
+
+/* 未存档帖子：只能下缩略图，主按钮切成橙色以提示「这不是原图」。
+   用双类名保证优先级高于上面的 .pd-btn--primary。 */
+.pd-btn--primary.pd-btn--thumbs {
+  background: #f57c00;
+  color: #fff;
+}
+
+.pd-btn--primary.pd-btn--thumbs:hover {
+  background: #ef6c00;
 }
 
 .pd-btn--cancel {
@@ -110,6 +141,31 @@
 }
 
 #pd-status[data-kind="info"] {
+  color: #90caf9;
+}
+
+/* 动作反馈行（「已加入队列 10 个文件」「已复制 12 个链接」等）。
+   与上面那条进度行分开，避免下一次轮询把它盖掉。 */
+.pd-panel__feedback {
+  margin-top: 4px;
+  font-size: 11.5px;
+  color: #b9bec9;
+  word-break: break-all;
+}
+
+.pd-panel__feedback:empty {
+  display: none;
+}
+
+.pd-panel__feedback[data-kind="ok"] {
+  color: #9be39b;
+}
+
+.pd-panel__feedback[data-kind="warn"] {
+  color: #ffb74d;
+}
+
+.pd-panel__feedback[data-kind="info"] {
   color: #90caf9;
 }
 
