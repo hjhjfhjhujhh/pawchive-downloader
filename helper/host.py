@@ -206,27 +206,18 @@ def port_is_free(port):
 def find_aria2(config):
     """按优先级找一个可用的 aria2c.exe。
 
-    这里刻意**不再包含任何开发机专属路径**（曾经写过
-    `~/Desktop/webExtensions/pawchiveDownloader2/...` 之类，换台机器就是死路径）。
-    现在的顺序是：config.json 指定 -> 随 helper 一起分发的位置 -> 用户级安装位置
-    -> PATH -> 项目自带的 _unused 参考包。
-    想固定用某个二进制，直接改 config.json 的 "aria2c" 字段即可。
+    本项目**不分发 aria2**，所以候选里刻意不含任何随仓库携带的发行包路径，
+    也不查项目留档目录里的旧副本。aria2 由使用者自己准备，放哪都行：
+    改 config.json 的 "aria2c" 指定，或放到 helper\\ 或
+    %LOCALAPPDATA%\\PawchiveDownloader\\，再或装进 PATH。
     """
     candidates = []
     if config.get("aria2c"):
         candidates.append(config["aria2c"])
     candidates.append(DEFAULT_ARIA2)
 
-    project_root = os.path.dirname(HERE)
     local_appdata = os.environ.get("LOCALAPPDATA") or os.path.expanduser("~")
-    for base in (
-        HERE,
-        os.path.join(local_appdata, "PawchiveDownloader"),  # 便携/绿色安装的常见落点
-        os.path.join(project_root, "_unused", "aria2-1.37.0"),
-        os.path.join(project_root, "aria2-1.37.0"),
-    ):
-        candidates.append(os.path.join(base, "aria2c.exe"))
-        candidates.append(os.path.join(base, "aria2-1.37.0", "aria2c.exe"))
+    candidates.append(os.path.join(local_appdata, "PawchiveDownloader", "aria2c.exe"))
 
     from_path = shutil.which("aria2c.exe") or shutil.which("aria2c")
     if from_path:
@@ -249,7 +240,8 @@ def spawn_aria2(config, staging_dir):
     exe = find_aria2(config)
     if not exe:
         raise Aria2Error(
-            "找不到 aria2c.exe，请把它放到 {} 或修改 config.json 里的 aria2c 路径".format(HERE)
+            "找不到 aria2c.exe。本项目不分发 aria2，请自行准备："
+            "放到 {}，或写进 config.json 的 \"aria2c\"，或装进 PATH".format(HERE)
         )
     os.makedirs(staging_dir, exist_ok=True)
 
@@ -503,7 +495,8 @@ def handle_start(payload):
     exe = find_aria2(config)
     if not exe:
         raise Aria2Error(
-            "找不到 aria2c.exe（已查找 {} 及常见位置）".format(DEFAULT_ARIA2)
+            "找不到 aria2c.exe（已查找 {}、%LOCALAPPDATA%\\PawchiveDownloader 与 PATH）。"
+            "本项目不分发 aria2，请自行准备".format(DEFAULT_ARIA2)
         )
     config["aria2c"] = exe
     save_config(config)
