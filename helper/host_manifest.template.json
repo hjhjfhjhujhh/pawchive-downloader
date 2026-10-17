@@ -1,7 +1,7 @@
 {
   "name": "com.pawchive.downloader",
   "description": "Pawchive Downloader aria2 RPC host",
-  "path": "C:\\Users\\14533\\Desktop\\webExtensions\\pawchiveDownloader2\\helper\\run_host.cmd",
+  "path": "C:/Users/<你的用户名>/.../pawchiveDownloader2/helper/run_host.cmd",
   "type": "stdio",
   "allowed_origins": [
     "chrome-extension://EXTENSION_ID_PLACEHOLDER/"
