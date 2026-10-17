@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>Pawchive 下载设置</title>
+  <style>
+    body {
+      width: 320px;
+      margin: 0;
+      padding: 14px;
+      font-family: system-ui, "Segoe UI", "Microsoft YaHei", sans-serif;
+      font-size: 13px;
+      color: #e8e8e8;
+      background: #1c1e26;
+    }
+    h1 {
+      margin: 0 0 10px;
+      font-size: 15px;
+      color: #fff;
+    }
+    .field {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .field label {
+      color: #c9ced9;
+    }
+    input[type="number"], input[type="text"] {
+      padding: 6px 8px;
+      border: 1px solid #3a3f4b;
+      border-radius: 6px;
+      background: #262933;
+      color: #fff;
+      font-size: 13px;
+    }
+    input[type="number"] { width: 76px; }
+    input[type="text"] { width: 100%; box-sizing: border-box; }
+    .field--stack {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 6px;
+    }
+    textarea {
+      width: 100%;
+      min-height: 62px;
+      padding: 6px 8px;
+      border: 1px solid #3a3f4b;
+      border-radius: 6px;
+      background: #262933;
+      color: #fff;
+      font-size: 12.5px;
+      font-family: inherit;
+      box-sizing: border-box;
+      resize: vertical;
+    }
+    button {
+      width: 100%;
+      padding: 8px 10px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      color: #fff;
+      background: #4caf50;
+    }
+    button:hover { background: #43a047; }
+    button.secondary { background: #3a3f4b; margin-top: 6px; }
+    button.secondary:hover { background: #4a5060; }
+    button:disabled { opacity: 0.55; cursor: not-allowed; }
+    hr { border: none; border-top: 1px solid #343845; margin: 14px 0; }
+    .hint { font-size: 11.5px; color: #8b91a0; margin: 6px 0 0; }
+    #saveStatus, #dlStatus { min-height: 16px; margin-top: 6px; font-size: 12px; color: #9be39b; }
+    .card {
+      border: 1px solid #343845;
+      border-radius: 8px;
+      padding: 9px 10px;
+      margin-bottom: 10px;
+      background: #21242d;
+    }
+    .card__title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 700;
+      color: #c9ced9;
+      margin-bottom: 5px;
+    }
+    .badge {
+      font-size: 11px;
+      padding: 1px 7px;
+      border-radius: 9px;
+      background: #3a3f4b;
+      color: #b9bec9;
+    }
+    .badge--ok { background: rgba(76, 175, 80, 0.2); color: #9be39b; }
+    .badge--warn { background: rgba(255, 183, 77, 0.18); color: #ffb74d; }
+    .mono { font-size: 11.5px; color: #8b91a0; word-break: break-all; line-height: 1.5; }
+    #postInfo { font-size: 12px; color: #b9bec9; word-break: break-all; margin-bottom: 8px; white-space: pre-line; }
+    #postInfo.warn { color: #ffb74d; }
+    ul.queue { list-style: none; margin: 0; padding: 0; }
+    ul.queue li {
+      font-size: 11.5px;
+      color: #b9bec9;
+      padding: 5px 0;
+      border-bottom: 1px solid #2b2f3a;
+      word-break: break-all;
+    }
+    ul.queue li:last-child { border-bottom: none; }
+    ul.queue .bar {
+      height: 3px;
+      border-radius: 2px;
+      background: #3a3f4b;
+      margin-top: 4px;
+      overflow: hidden;
+    }
+    ul.queue .bar > i { display: block; height: 100%; background: #4caf50; }
+    ul.queue .bar > i.failed { background: #d32f2f; }
+    /* 开关 */
+    .switch { display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
+    .switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+    .switch__track {
+      width: 36px; height: 20px; border-radius: 10px; background: #3a3f4b;
+      position: relative; transition: background 0.15s ease; flex: 0 0 auto;
+    }
+    .switch__track::after {
+      content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px;
+      border-radius: 50%; background: #fff; transition: transform 0.15s ease;
+    }
+    .switch input:checked + .switch__track { background: #4caf50; }
+    .switch input:checked + .switch__track::after { transform: translateX(16px); }
+    .switch input:focus-visible + .switch__track { outline: 2px solid #90caf9; outline-offset: 2px; }
+
+    /* 当前下载/排队列表 */
+    .files { max-height: 230px; overflow-y: auto; margin-top: 6px; }
+    .files__group {
+      font-size: 11px; color: #8b91a0; padding: 5px 0 3px;
+      border-top: 1px solid #2b2f3a; margin-top: 2px;
+    }
+    .files__group:first-child { border-top: none; margin-top: 0; }
+    .files__row {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 11.5px; color: #b9bec9; padding: 2px 0;
+    }
+    .files__dot { width: 7px; height: 7px; border-radius: 50%; flex: 0 0 auto; background: #3a3f4b; }
+    .files__dot--active { background: #42a5f5; }
+    .files__dot--done { background: #4caf50; }
+    .files__dot--failed { background: #d32f2f; }
+    .files__name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .files__meta { flex: 0 0 auto; color: #8b91a0; font-size: 10.5px; }
+    .files__empty { color: #8b91a0; font-size: 11.5px; padding: 4px 0; }
+    .files__actions { display: flex; gap: 6px; margin-top: 8px; }
+    .files__actions button { margin-top: 0; }
+    button.danger { background: #d32f2f; }
+    button.danger:hover { background: #b71c1c; }
+  </style>
+</head>
+<body>
+  <h1>⬇ Pawchive 下载器</h1>
+
+  <div class="card">
+    <div class="card__title">
+      <span>aria2 引擎</span>
+      <span class="badge" id="engineBadge">检查中…</span>
+    </div>
+    <div class="mono" id="engineInfo">正在连接原生宿主…</div>
+    <div class="mono" id="stagingInfo"></div>
+    <button id="engineStart" class="secondary" style="display:none">重新连接辅助程序</button>
+    <button id="diagnose" class="secondary">检测下载/临时目录可写性</button>
+    <div class="mono" id="diagInfo"></div>
+  </div>
+
+  <div class="field">
+    <label for="maxParallel">最大并行下载数</label>
+    <input type="number" id="maxParallel" min="1" max="16" step="1" value="8">
+  </div>
+  <p class="hint">全局生效：所有帖子的文件共用这个并行数，任务会在帖子之间交错分配（不会被单个帖子占满）。</p>
+
+  <div class="field field--stack" style="margin-top:10px">
+    <label for="downloadDir">下载目录（留空 = 系统「下载」文件夹）</label>
+    <input type="text" id="downloadDir" placeholder="C:\Users\你\Downloads">
+  </div>
+
+  <div class="field" style="margin-top:10px">
+    <label for="skipFirst">每帖跳过前 N 张</label>
+    <input type="number" id="skipFirst" min="0" step="1" value="0">
+  </div>
+  <div class="field">
+    <label for="skipLast">每帖跳过后 N 张</label>
+    <input type="number" id="skipLast" min="0" step="1" value="0">
+  </div>
+
+  <div class="field field--stack" style="margin-top:10px">
+    <label for="blockWords">标题屏蔽字（每行一个）</label>
+    <textarea id="blockWords" placeholder="(Pixiv Fanbox)&#10;patreon"></textarea>
+  </div>
+
+  <label class="switch field" for="blockCover">
+    <span>自动跳过封面图（fanbox）</span>
+    <span style="display:flex;align-items:center;gap:8px">
+      <input type="checkbox" id="blockCover" checked>
+      <span class="switch__track"></span>
+    </span>
+  </label>
+  <p class="hint">开启后，「下载帖子全部图片」会自动跳过 fanbox 帖子的封面（文件名 <code>cover.*</code>；找不到时跳过第一张）。附件与视频不受影响。</p>
+
+  <button id="save">保存设置</button>
+  <div id="saveStatus"></div>
+  <p class="hint">并行数默认 8，aria2 每个文件最多 8 连接、自身重试 5 次，扩展再加 2 次重试。</p>
+
+  <hr>
+
+  <div id="postInfo">未检测到 pawchive/kemono 帖子页面</div>
+  <button id="downloadBtn" class="secondary">下载当前帖子全部图片</button>
+  <div id="dlStatus"></div>
+
+  <hr>
+
+  <div class="card__title">
+    <span>当前下载 / 排队</span>
+    <span class="badge" id="queueBadge">空闲</span>
+  </div>
+  <div class="mono" id="queueSummary"></div>
+  <div class="files" id="fileList"></div>
+  <div class="files__actions">
+    <button id="cancelAll" class="danger" disabled>中止全部下载</button>
+    <button id="clearFinished" class="secondary">清除已完成</button>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

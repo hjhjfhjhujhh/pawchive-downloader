@@ -1,0 +1,31 @@
+# 统一换行与二进制判定，避免「生成器产物 / 手工产物」产生无意义的 diff。
+#
+# 背景：helper 下的 .cmd 必须是 GBK + CRLF（cmd.exe 解析 LF-only 会错位，
+# 见 调试笔记 2.13）。它们由 _unused/cmd-src/build-cmds.ps1 生成。
+# 声明成 text + eol=crlf 之后，git 在 checkin 时统一成 LF 存进对象库、
+# checkout 时再写回 CRLF，所以生成器产物与仓库内容不会来回抖动。
+# 注意：这不会改变工作区文件当前的换行，也不影响 cmd.exe 读取。
+
+* text=auto
+
+# 批处理与文本：恒定 CRLF
+*.cmd   text eol=crlf
+*.bat   text eol=crlf
+*.ps1   text eol=crlf
+
+# 明确为文本（便于 diff）
+*.js    text
+*.json  text
+*.html  text
+*.css   text
+*.md    text
+*.py    text
+
+# 二进制：不做任何换行转换
+*.exe   binary
+*.png   binary
+*.ico   binary
+*.pem   binary
+
+# 生成器产物：在 git log / blame 里不显示
+_unused/cmd-src/build-cmds.ps1  linguist-generated=true

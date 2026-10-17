@@ -1,0 +1,38 @@
+[
+  {
+    "id": 1,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "requestDomains": ["excavatenearbywand.com"],
+      "resourceTypes": ["script", "sub_frame", "xmlhttprequest", "image", "ping", "other"]
+    }
+  },
+  {
+    "id": 2,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "requestDomains": ["phonydepth.com"],
+      "resourceTypes": ["script", "sub_frame", "xmlhttprequest", "image", "ping", "other"]
+    }
+  },
+  {
+    "id": 3,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "requestDomains": ["ogfkpyvpe.in"],
+      "resourceTypes": ["script", "sub_frame", "xmlhttprequest", "image", "ping", "other"]
+    }
+  },
+  {
+    "id": 4,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "requestDomains": ["botsdiag.com"],
+      "resourceTypes": ["script", "sub_frame", "xmlhttprequest", "image", "ping", "other"]
+    }
+  }
+]

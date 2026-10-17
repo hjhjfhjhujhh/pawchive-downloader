@@ -1,0 +1,37 @@
+# ============================================================
+# 运行时产物（会被自动重建，不要提交）
+# ============================================================
+helper/config.json
+helper/host.log
+helper/aria2.*.log
+helper/python-path.txt
+helper/extension-id.txt
+helper/host-manifest.*.json.bak
+helper/registry-chrome.*.txt
+helper/registry-edge.*.txt
+
+# 扩展签名私钥：只在打包签名时用得到，绝不提交
+helper/keys/
+
+# Edge 加载扩展时生成的编译规则集（不要删，但打包/提交时排除）
+extension/_metadata/
+
+# ============================================================
+# 第三方二进制：按使用者要求不纳入版本管理
+# 需要时自行把 aria2c.exe 放到 helper\ 下（host.py 的 find_aria2 会找到它）
+# ============================================================
+helper/aria2c.exe
+_unused/aria2-1.37.0/aria2c.exe
+
+# ============================================================
+# Python / 编辑器 / 系统产物
+# ============================================================
+__pycache__/
+*.pyc
+*.tmp
+.vs/
+Thumbs.db
+desktop.ini
+
+# 临时提交信息文件
+_unused/commit-msg-*.txt

@@ -1,0 +1,316 @@
+#pd-panel {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  z-index: 2147483647;
+  width: 260px;
+  padding: 10px 12px;
+  background: rgba(24, 26, 32, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+  color: #e8e8e8;
+  font-family: system-ui, "Segoe UI", "Microsoft YaHei", sans-serif;
+  font-size: 13px;
+  line-height: 1.4;
+  box-sizing: border-box;
+}
+
+#pd-panel * {
+  box-sizing: border-box;
+}
+
+.pd-panel__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.pd-panel__logo {
+  font-size: 15px;
+}
+
+.pd-panel__title {
+  font-weight: 700;
+  font-size: 13px;
+  color: #fff;
+  flex: 1;
+}
+
+.pd-panel__count {
+  font-size: 12px;
+  color: #9be39b;
+  background: rgba(76, 175, 80, 0.15);
+  border-radius: 10px;
+  padding: 1px 8px;
+  white-space: nowrap;
+}
+
+.pd-panel__row {
+  display: flex;
+  gap: 8px;
+}
+
+.pd-btn {
+  padding: 7px 10px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #e8e8e8;
+  background: #3a3f4b;
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+
+.pd-btn:hover {
+  background: #4a5060;
+}
+
+.pd-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.pd-btn--primary {
+  flex: 1;
+  background: #4caf50;
+  color: #fff;
+}
+
+.pd-btn--primary:hover {
+  background: #43a047;
+}
+
+.pd-btn--cancel {
+  background: #d32f2f;
+  color: #fff;
+  padding: 7px 10px;
+}
+
+.pd-btn--cancel:hover {
+  background: #b71c1c;
+}
+
+#pd-status {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #b9bec9;
+  min-height: 16px;
+  word-break: break-all;
+}
+
+#pd-status[data-kind="ok"] {
+  color: #9be39b;
+}
+
+#pd-status[data-kind="warn"] {
+  color: #ffb74d;
+}
+
+#pd-status[data-kind="info"] {
+  color: #90caf9;
+}
+
+.pd-img-btn-wrap {
+  display: inline-flex;
+  margin-left: 8px;
+  align-items: center;
+  vertical-align: middle;
+}
+
+.pd-img-btn {
+  padding: 2px 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  cursor: pointer;
+  border: 1px solid #4caf50;
+  border-radius: 4px;
+  background: #4caf50;
+  color: #fff;
+  font-weight: 600;
+  font-family: system-ui, "Segoe UI", "Microsoft YaHei", sans-serif;
+}
+
+.pd-img-btn:hover {
+  background: #43a047;
+}
+
+.pd-img-btn:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+/* ---------- 正文框最上方的密集缩略图条（位于 Downloads/Content/Files 之前） ---------- */
+.pd-thumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 10px 0;
+  max-height: 440px;
+  overflow-y: auto;
+  margin-bottom: 10px;
+}
+
+.pd-thumb-link {
+  display: inline-block;
+  position: relative;
+  width: auto;
+  height: auto;
+  max-width: 400px;
+  max-height: 400px;
+  flex: 0 0 auto;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  background: #2a2e38;
+  line-height: 0;
+}
+
+.pd-thumb-link:hover {
+  border-color: #4caf50;
+}
+
+.pd-thumb-img {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 400px;
+  max-height: 400px;
+  object-fit: contain;
+}
+
+.pd-thumb-dl {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(76, 175, 80, 0.92);
+  color: #fff;
+  font-size: 14px;
+  line-height: 26px;
+  text-align: center;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
+.pd-thumb-dl:hover {
+  background: #43a047;
+}
+
+.pd-thumb-dl:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+/* ---------- 下载器面板顶部：上一页/下一页导航 ---------- */
+.pd-panel__nav {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.pd-panel-nav-link {
+  color: #90caf9;
+  text-decoration: none;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.pd-panel-nav-link:hover {
+  text-decoration: underline;
+}
+
+.pd-panel-nav-link--disabled {
+  color: #8b91a0;
+  pointer-events: none;
+}
+
+/* ---------- 透明图片显示背景：淡灰色，便于观察透明区域 ---------- */
+.pd-thumb-img,
+a.fileThumb.image-link img,
+.post__content img,
+.post__body img,
+img.post__image {
+  background-color: #d3d3d3;
+}
+
+/* ---------- 作者主页：未存档帖子（感叹号徽标）加大红 X 覆盖（扁平化） ---------- */
+.post-card.pd-unarchived {
+  position: relative;
+}
+
+.pd-unarchived-x {
+  position: absolute;
+  inset: 0;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none; /* 不影响点击卡片进入帖子 */
+}
+
+.pd-unarchived-x::before,
+.pd-unarchived-x::after {
+  content: '';
+  position: absolute;
+  width: 74%;
+  height: 13%;
+  background: #e02424;
+}
+
+.pd-unarchived-x::before {
+  transform: rotate(45deg);
+}
+
+.pd-unarchived-x::after {
+  transform: rotate(-45deg);
+}
+
+/* ---------- 作者主页：未访问帖子格子显示绿色边框（回滚方案，保持生效） ----------
+   不再追究 :visited；采用实测有效的“未访问 = 绿框、已访问 = 无框”：
+   用 ::after 覆盖层给未访问的卡片上绿框（盖在缩略图之上且不挡点击），
+   已访问时去掉绿框。 */
+.post-card > a.image-link {
+  position: relative;
+}
+
+.post-card > a.image-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  border: 4px solid #2ecc40; /* 默认（未访问）：绿色边框 */
+  border-radius: inherit;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.post-card > a.image-link:visited::after {
+  border-color: transparent; /* 已访问：去掉绿框 */
+}
+
+/* ---------- 面板底部：aria2 引擎状态 ---------- */
+.pd-panel__engine {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 11.5px;
+  color: #8b91a0;
+  word-break: break-all;
+}
+
+.pd-panel__engine[data-kind="ok"] {
+  color: #9be39b;
+}
+
+.pd-panel__engine[data-kind="warn"] {
+  color: #ffb74d;
+}

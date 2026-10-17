@@ -1,0 +1,93 @@
+{
+  "manifest_version": 3,
+  "name": "Pawchive 帖子下载器 (aria2)",
+  "version": "2.0.0",
+  "description": "一键下载 pawchive/kemono 帖子内的全部图片，经 aria2 引擎归档到 下载/pawchive/作者-平台-作者ID/帖子ID-标题/；全局并行、跨帖子均衡调度；附件/视频点击即下载；作者主页标记未存档帖子。",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAn3dvNil8uria1IeyC6tdGClNxKFiCew7KfNSh07VI98t9bDxul1omLbW/Fu+8C+bn9rTTqH3bBzRS8Uod/eYgKHezZ+9eruyDkrDPxxiGTfaKZadGsm/JLFOZ3IzQBA998/jiPPT93ieY6eSdl7/q3zomXkd3u5tX2ulmkzmn7ktu6BBu1pft2+WNMJWahbE7apXq4MTrpXK1ZNCtGsXFNmWipH4HprNj/HjU+r/7azecajba3XB6UL7sCcCCQPJ2/MydCz1xDDd4yGMSDhRWDG+aguGzFWMidBsOtSmkSL1YeGjpOBL1U32NGeqvEIMuXzIk/4Q1gT7x2yrk0nFwwIDAQAB",
+  "minimum_chrome_version": "116",
+  "permissions": [
+    "downloads",
+    "storage",
+    "notifications",
+    "nativeMessaging",
+    "alarms",
+    "tabs",
+    "declarativeNetRequest"
+  ],
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "pawchive_ads",
+        "enabled": true,
+        "path": "rules.json"
+      }
+    ]
+  },
+  "host_permissions": [
+    "https://pawchive.pw/*",
+    "https://*.pawchive.pw/*",
+    "https://pawchive.su/*",
+    "https://*.pawchive.su/*",
+    "https://kemono.party/*",
+    "https://*.kemono.party/*",
+    "https://kemono.su/*",
+    "https://*.kemono.su/*",
+    "http://127.0.0.1/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Pawchive 下载设置",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://pawchive.pw/*",
+        "https://*.pawchive.pw/*",
+        "https://pawchive.su/*",
+        "https://*.pawchive.su/*",
+        "https://kemono.party/*",
+        "https://*.kemono.party/*",
+        "https://kemono.su/*",
+        "https://*.kemono.su/*"
+      ],
+      "js": [
+        "main-guard.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN",
+      "all_frames": true
+    },
+    {
+      "matches": [
+        "https://pawchive.pw/*",
+        "https://*.pawchive.pw/*",
+        "https://pawchive.su/*",
+        "https://*.pawchive.su/*",
+        "https://kemono.party/*",
+        "https://*.kemono.party/*",
+        "https://kemono.su/*",
+        "https://*.kemono.su/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
